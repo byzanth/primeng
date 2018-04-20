@@ -19,7 +19,7 @@ export const AUTOCOMPLETE_VALUE_ACCESSOR: any = {
         <span [ngClass]="{'ui-autocomplete ui-widget':true,'ui-autocomplete-dd':dropdown,'ui-autocomplete-multiple':multiple}" [ngStyle]="style" [class]="styleClass">
             <input *ngIf="!multiple" #in [attr.type]="type" [attr.id]="inputId" [ngStyle]="inputStyle" [class]="inputStyleClass" autocomplete="off" [attr.required]="required"
             [ngClass]="'ui-inputtext ui-widget ui-state-default ui-corner-all ui-autocomplete-input'" [value]="inputFieldValue"
-            (click)="onInputClick($event)" (input)="onInput($event)" (keydown)="onKeydown($event)" (keyup)="onKeyup($event)" (focus)="onInputFocus($event)" (blur)="onInputBlur($event)" (change)="onInputChange($event)"
+            (click)="onInputClick($event)" (paste)="onPaste($event)" (input)="onInput($event)" (keydown)="onKeydown($event)" (keyup)="onKeyup($event)" (focus)="onInputFocus($event)" (blur)="onInputBlur($event)" (change)="onInputChange($event)"
             [attr.placeholder]="placeholder" [attr.size]="size" [attr.maxlength]="maxlength" [attr.tabindex]="tabindex" [readonly]="readonly" [disabled]="disabled"
             ><ul *ngIf="multiple" #multiContainer class="ui-autocomplete-multiple-container ui-widget ui-inputtext ui-state-default ui-corner-all" [ngClass]="{'ui-state-disabled':disabled,'ui-state-focus':focus}" (click)="multiIn.focus()">
                 <li #token *ngFor="let val of value" class="ui-autocomplete-token ui-state-highlight ui-corner-all">
@@ -34,8 +34,8 @@ export const AUTOCOMPLETE_VALUE_ACCESSOR: any = {
             </ul
             ><i *ngIf="loading" class="ui-autocomplete-loader fa fa-circle-o-notch fa-spin fa-fw"></i><button #ddBtn type="button" pButton icon="fa-fw fa-caret-down" class="ui-autocomplete-dropdown" [disabled]="disabled"
                 (click)="handleDropdownClick($event)" *ngIf="dropdown"></button>
-            <div #panel class="ui-autocomplete-panel ui-widget-content ui-corner-all ui-shadow" [style.display]="panelVisible ? 'block' : 'none'" [style.width]="appendTo ? 'auto' : '100%'" [style.max-height]="scrollHeight">
-                <ul class="ui-autocomplete-items ui-autocomplete-list ui-widget-content ui-widget ui-corner-all ui-helper-reset" *ngIf="panelVisible">
+            <div #panel class="ui-autocomplete-panel ui-widget-content ui-corner-all ui-shadow" [style.display]="panelVisible || error ? 'block' : 'none'" [style.width]="appendTo ? 'auto' : '100%'" [style.max-height]="scrollHeight">
+                <ul class="ui-autocomplete-items ui-autocomplete-list ui-widget-content ui-widget ui-corner-all ui-helper-reset" *ngIf="panelVisible && !error">
                     <li *ngFor="let option of suggestions; let idx = index" [ngClass]="{'ui-autocomplete-list-item ui-corner-all':true,'ui-state-highlight':(highlightOption==option)}"
                         (mouseenter)="highlightOption=option" (mouseleave)="highlightOption=null" (click)="selectItem(option)">
                         <span *ngIf="!itemTemplate">{{field ? objectUtils.resolveFieldData(option, field) : option}}</span>
@@ -43,6 +43,8 @@ export const AUTOCOMPLETE_VALUE_ACCESSOR: any = {
                     </li>
                     <li *ngIf="noResults && emptyMessage" class="ui-autocomplete-list-item ui-corner-all">{{emptyMessage}}</li>
                 </ul>
+                <div *ngIf="error" class="ui-autocomplete-panel-infotext error">{{error.message}}</div>
+                <div *ngIf="infoText && showInfoText && !error" class="ui-autocomplete-panel-infotext info">{{infoText}}</div>
             </div>
         </span>
     `,
@@ -111,6 +113,12 @@ export class AutoComplete implements AfterViewInit,AfterViewChecked,DoCheck,Cont
     @Input() dropdown: boolean;
 
     @Input() dropdownMode: string = 'blank';
+
+    @Input() infoText: string;
+
+    @Input() error: Error;
+
+    @Input() showInfoText: boolean = true;
 
     @Input() multiple: boolean;
 
@@ -289,6 +297,17 @@ export class AutoComplete implements AfterViewInit,AfterViewChecked,DoCheck,Cont
 
     setDisabledState(val: boolean): void {
         this.disabled = val;
+    }
+
+    onPaste(event: ClipboardEvent) {
+        if(event.clipboardData.types[0] !== "text/plain") {
+            return false;
+        }
+        if(!event.clipboardData.getData("Text") || event.clipboardData.getData("Text") === "") {
+            return false;
+        }
+        let pastedData = event.clipboardData.getData("Text");
+        this.writeValue("");
     }
 
     onInput(event: KeyboardEvent) {
